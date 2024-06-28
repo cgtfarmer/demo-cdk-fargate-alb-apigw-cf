@@ -1,3 +1,4 @@
+import { join } from 'path';
 import { Duration, Size, Stack, StackProps } from 'aws-cdk-lib';
 import { InstanceClass, InstanceSize, InstanceType, Vpc } from 'aws-cdk-lib/aws-ec2';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
@@ -8,9 +9,13 @@ import { ApplicationLoadBalancer } from 'aws-cdk-lib/aws-elasticloadbalancingv2'
 import { Construct } from 'constructs';
 import { CorsHttpMethod, HttpApi, HttpMethod } from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpAlbIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import { Code, Function, Runtime } from 'aws-cdk-lib/aws-lambda';
+import { HttpLambdaAuthorizer, HttpLambdaResponseType } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 
 interface ApiStackProps extends StackProps {
   ecrRepository: Repository;
+
+  cloudFrontHeader: Record<string, string>;
 }
 
 export class ApiStack extends Stack {
@@ -86,6 +91,21 @@ export class ApiStack extends Stack {
       }
     });
 
+    const cfHeaderLambda = new Function(this, 'CfHeaderLambda', {
+      runtime: Runtime.NODEJS_18_X,
+      code: Code.fromAsset(join(__dirname, '../lambdas/cloudfront-header-authorizer')),
+      handler: 'index.handler',
+      environment: {
+        CLOUDFRONT_HEADER_KEY: props.cloudFrontHeader.key,
+        CLOUDFRONT_HEADER_VALUE: props.cloudFrontHeader.value,
+      }
+    });
+
+    const cfHeaderAuthorizer = new HttpLambdaAuthorizer('CfHeaderAuthorizer', cfHeaderLambda, {
+      responseTypes: [HttpLambdaResponseType.SIMPLE],
+      identitySource: [`$request.header.${props.cloudFrontHeader.key}`]
+    });
+
     const httpApi = new HttpApi(this, 'HttpApi', {
       createDefaultStage: false,
       corsPreflight: {
@@ -127,6 +147,7 @@ export class ApiStack extends Stack {
         // HttpMethod.PATCH
       ],
       integration: new HttpAlbIntegration('DefaultIntegration', listener),
+      authorizer: cfHeaderAuthorizer,
     });
 
     this.apiUrl = `${httpApi.apiId}.execute-api.${process.env.CDK_DEFAULT_REGION}.amazonaws.com`;

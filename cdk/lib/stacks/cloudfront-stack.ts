@@ -7,6 +7,8 @@ import { HttpOrigin } from 'aws-cdk-lib/aws-cloudfront-origins';
 
 interface CloudFrontStackProps extends StackProps {
   apiUrl: string;
+
+  header: Record<string, string>;
 }
 
 export class CloudFrontStack extends Stack {
@@ -14,8 +16,12 @@ export class CloudFrontStack extends Stack {
   constructor(scope: Construct, id: string, props: CloudFrontStackProps) {
     super(scope, id, props);
 
+    const headers: Record<string, string> = {};
+    headers[props.header.key] = props.header.value;
+
     const httpApiOrigin = new HttpOrigin(props.apiUrl, {
       protocolPolicy: OriginProtocolPolicy.HTTPS_ONLY,
+      customHeaders: headers,
     });
 
     const originBehaviorOptions: BehaviorOptions = {
