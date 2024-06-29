@@ -11,6 +11,7 @@ import { CorsHttpMethod, HttpApi, HttpMethod } from 'aws-cdk-lib/aws-apigatewayv
 import { HttpAlbIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { Code, Function, Runtime } from 'aws-cdk-lib/aws-lambda';
 import { HttpLambdaAuthorizer, HttpLambdaResponseType } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 
 interface ApiStackProps extends StackProps {
   ecrRepository: Repository;
@@ -91,14 +92,17 @@ export class ApiStack extends Stack {
       }
     });
 
-    const cfHeaderLambda = new Function(this, 'CfHeaderLambda', {
+    const cfHeaderLambda = new NodejsFunction(this, 'CfHeaderLambda', {
       runtime: Runtime.NODEJS_18_X,
-      code: Code.fromAsset(join(__dirname, '../lambdas/cloudfront-header-authorizer')),
+      entry: join(__dirname, '../lambdas/cloudfront-header-authorizer/index.ts'),
       handler: 'index.handler',
+      bundling: {
+        nodeModules: ['@types/aws-lambda'],
+      },
       environment: {
         CLOUDFRONT_HEADER_KEY: props.cloudFrontHeader.key,
         CLOUDFRONT_HEADER_VALUE: props.cloudFrontHeader.value,
-      }
+      },
     });
 
     const cfHeaderAuthorizer = new HttpLambdaAuthorizer('CfHeaderAuthorizer', cfHeaderLambda, {
