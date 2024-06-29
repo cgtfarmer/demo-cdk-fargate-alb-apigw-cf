@@ -1,6 +1,8 @@
 # CDK Fargate ALB API GW Demo
 
-This is a demo showing how to deploy a simple Express API to ECS Fargate, load balanced by a private Application Load Balancer, served by a publicly available API Gateway (HTTP API)
+This is a demo showing how to deploy a simple Express API to ECS Fargate, load balanced by a private Application Load Balancer, served by an API Gateway (HTTP API) which can only be accessed through CloudFront, due to the Lambda Authorizer
+
+![LessonGraphics-CF-Lambda-Auth-Fargate](https://github.com/cgtfarmer/demo-cdk-fargate-alb-apigw-cf/assets/33764231/07b34a1f-6003-4a26-b302-638d5993a949)
 
 ## Prerequisites
 
